@@ -239,59 +239,64 @@ export default function PDFViewerScreen({ route, navigation }) {
         contentInset={{ top: 0, right: 0, bottom: 0, left: 0 }}
       />
 
-      {/* Footer with Share Button - Gradient Blur Background */}
-      <BlurView
-        intensity={80}
-        tint="light"
+      {/* Footer with Share Button - Transparent Gradient Blur Background */}
+      <View
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          paddingBottom: insets.bottom + 16,
-          paddingTop: 16,
-          paddingHorizontal: 20,
-          overflow: 'hidden',
         }}
       >
-        <LinearGradient
-          colors={['rgba(255, 255, 255, 0.95)', 'rgba(249, 250, 251, 0.9)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
+        <BlurView
+          intensity={90}
+          tint="extraLight"
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            paddingBottom: 16,
+            paddingTop: 16,
+            paddingHorizontal: 16,
+            overflow: 'hidden',
           }}
-        />
-        <TouchableOpacity
-          onPress={handleShare}
-          disabled={sharing}
-          className="rounded-2xl py-4"
-          style={{
-            backgroundColor: '#2563EB',
-            shadowColor: '#2563EB',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 4,
-          }}
-          activeOpacity={0.8}
         >
-          {sharing ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <View className="flex-row items-center justify-center">
-              <Share2 size={20} color="#FFFFFF" strokeWidth={2} />
-              <Text className="text-white font-bold text-base ml-2">
-                Share Report
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </BlurView>
+          <LinearGradient
+            colors={['rgba(255, 255, 255, 0.9)', 'rgba(249, 250, 251, 0.2)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+          />
+          <TouchableOpacity
+            onPress={handleShare}
+            disabled={sharing}
+            className="rounded-2xl py-4"
+            style={{
+              backgroundColor: '#2563EB',
+              shadowColor: '#2563EB',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+            activeOpacity={0.8}
+          >
+            {sharing ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <View className="flex-row items-center justify-center">
+                <Share2 size={20} color="#FFFFFF" strokeWidth={2} />
+                <Text className="text-white font-bold text-base ml-2">
+                  Share Report
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </BlurView>
+      </View>
     </View>
   );
 }

@@ -54,9 +54,9 @@ export default function PropertyListScreen({ navigation }) {
         return;
       }
 
-      // Get current location
+      // Get current location with high accuracy
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.Highest,
       });
 
       // Reverse geocode to get address
@@ -67,12 +67,42 @@ export default function PropertyListScreen({ navigation }) {
 
       if (addresses && addresses.length > 0) {
         const address = addresses[0];
-        const formattedAddress = `${address.street || ''}, ${address.city || ''}, ${address.region || ''} ${address.postalCode || ''}`.trim();
+        
+        // Build complete address with house number
+        const addressParts = [];
+        
+        // Add street number (house number) if available
+        if (address.streetNumber) {
+          addressParts.push(address.streetNumber);
+        }
+        
+        // Add street name if available
+        if (address.street) {
+          addressParts.push(address.street);
+        }
+        
+        // Create street address line
+        const streetAddress = addressParts.join(' ');
+        
+        // Build full address with city, state, and zip
+        const cityStateZip = [
+          address.city || '',
+          address.region || address.state || '',
+          address.postalCode || ''
+        ].filter(part => part).join(' ');
+        
+        // Combine everything
+        const formattedAddress = [streetAddress, cityStateZip]
+          .filter(part => part)
+          .join(', ');
+        
         setNewPropertyAddress(formattedAddress);
+      } else {
+        Alert.alert('Location Found', 'Could not find address for this location. Please enter manually.');
       }
     } catch (error) {
       console.error('Location error:', error);
-      Alert.alert('Error', 'Failed to get current location');
+      Alert.alert('Error', 'Failed to get current location. Please check location services are enabled.');
     } finally {
       setFetchingLocation(false);
     }
@@ -288,16 +318,27 @@ export default function PropertyListScreen({ navigation }) {
                         onPress={getLocationAddress}
                         disabled={fetchingLocation}
                         activeOpacity={0.7}
-                        className="flex-row items-center bg-blue-50 px-3 py-1.5 rounded-lg"
+                        className="flex-row items-center px-3 py-1.5 rounded-lg"
+                        style={{
+                          backgroundColor: fetchingLocation ? '#DBEAFE' : '#EFF6FF',
+                          opacity: fetchingLocation ? 0.8 : 1,
+                        }}
                       >
                         {fetchingLocation ? (
-                          <Loader size={14} color="#2563EB" className="animate-spin" />
+                          <>
+                            <ActivityIndicator size="small" color="#2563EB" />
+                            <Text className="text-xs font-semibold text-blue-600 ml-2">
+                              Getting location...
+                            </Text>
+                          </>
                         ) : (
-                          <MapPin size={14} color="#2563EB" strokeWidth={2} />
+                          <>
+                            <MapPin size={14} color="#2563EB" strokeWidth={2} />
+                            <Text className="text-xs font-semibold text-blue-600 ml-1">
+                              Use Location
+                            </Text>
+                          </>
                         )}
-                        <Text className="text-xs font-semibold text-blue-600 ml-1">
-                          Use Location
-                        </Text>
                       </TouchableOpacity>
                     </View>
                     <View
