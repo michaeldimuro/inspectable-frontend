@@ -140,10 +140,10 @@ export default function PropertyListScreen({ navigation }) {
       {/* Header */}
       <View style={{ backgroundColor: '#FFFFFF', paddingTop: insets.top + 12, paddingBottom: 16, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
         <Text className="text-3xl font-bold text-gray-900 mb-1">
-          Properties
+          Inspections
         </Text>
         <Text className="text-sm text-gray-500 mb-4">
-          Manage your inspection properties
+          Manage your property inspections
         </Text>
 
         {/* Search Bar */}

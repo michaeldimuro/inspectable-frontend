@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,17 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Camera, Package } from 'lucide-react-native';
+import { ChevronLeft, Camera, Package, Edit2 } from 'lucide-react-native';
 import { usePropertyStore } from '../stores/propertyStore';
+import { areasAPI } from '../services/api';
 import InspectionItemCard from '../components/InspectionItemCard';
 
 export default function AreaDetailScreen({ route, navigation }) {
@@ -19,12 +26,60 @@ export default function AreaDetailScreen({ route, navigation }) {
     usePropertyStore();
 
   const area = currentProperty?.areas?.find((a) => a.id === areaId);
+  
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editStatus, setEditStatus] = useState(area?.status || 'IN');
+  const [editNotInspectedReason, setEditNotInspectedReason] = useState(area?.notInspectedReason || '');
+  const [focusedField, setFocusedField] = useState(null);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (area) {
       setCurrentArea(area);
+      setEditStatus(area.status || 'IN');
+      setEditNotInspectedReason(area.notInspectedReason || '');
     }
   }, [area]);
+
+  const handleUpdateStatus = async () => {
+    if (editStatus === 'NI' && !editNotInspectedReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for not inspecting this area');
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      const data = { status: editStatus };
+      if (editStatus === 'NI') {
+        data.notInspectedReason = editNotInspectedReason;
+      }
+      
+      await areasAPI.update(areaId, data);
+      
+      // Refresh the property
+      if (currentProperty) {
+        await fetchPropertyById(currentProperty.id);
+      }
+      
+      setEditModalVisible(false);
+      Alert.alert('Success', 'Area status updated');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update area status');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      IN: { label: 'Inspected', color: '#2563EB', bgColor: '#EFF6FF', icon: '✓', description: 'Visually observed and appears to be functioning as intended' },
+      NI: { label: 'Not Inspected', color: '#F59E0B', bgColor: '#FEF3C7', icon: '⊘', description: 'Not inspected - reason provided below' },
+      NP: { label: 'Not Present', color: '#6B7280', bgColor: '#F3F4F6', icon: '∅', description: 'This item is not present in this home or building' },
+      RR: { label: 'Repair or Replace', color: '#DC2626', bgColor: '#FEE2E2', icon: '⚠', description: 'Not functioning as intended, needs further inspection or repair' },
+    };
+
+    return statusConfig[status] || statusConfig.IN;
+  };
 
   const handleEditItem = (item) => {
     navigation.navigate('Camera', { 
@@ -85,7 +140,7 @@ export default function AreaDetailScreen({ route, navigation }) {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Area Header */}
         <View style={{ backgroundColor: '#FFFFFF', paddingTop: 20, paddingBottom: 24, paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-          <View className="flex-row items-start justify-between">
+          <View className="flex-row items-start justify-between mb-4">
             <View className="flex-1 mr-4">
               <Text className="text-2xl font-bold text-gray-900 mb-2">
                 {area.name}
@@ -98,6 +153,53 @@ export default function AreaDetailScreen({ route, navigation }) {
               <Package size={28} color="#2563EB" strokeWidth={2} />
             </View>
           </View>
+
+          {/* Status Section */}
+          {(() => {
+            const statusInfo = getStatusBadge(area.status || 'IN');
+            return (
+              <View style={{ backgroundColor: statusInfo.bgColor, borderRadius: 12, padding: 16 }}>
+                <View className="flex-row items-center justify-between mb-2">
+                  <View className="flex-row items-center flex-1">
+                    <Text style={{ fontSize: 20, marginRight: 8 }}>{statusInfo.icon}</Text>
+                    <Text style={{ color: statusInfo.color, fontSize: 16, fontWeight: '700' }}>
+                      {statusInfo.label}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setEditModalVisible(true)}
+                    activeOpacity={0.7}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Edit2 size={14} color={statusInfo.color} strokeWidth={2} />
+                    <Text style={{ color: statusInfo.color, fontSize: 12, fontWeight: '600', marginLeft: 4 }}>
+                      Edit
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={{ color: statusInfo.color, fontSize: 13, opacity: 0.8, marginBottom: 8 }}>
+                  {statusInfo.description}
+                </Text>
+                {area.status === 'NI' && area.notInspectedReason && (
+                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 12, marginTop: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 4 }}>
+                      Reason for Not Inspecting:
+                    </Text>
+                    <Text style={{ fontSize: 14, color: '#374151' }}>
+                      {area.notInspectedReason}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })()}
         </View>
 
         {/* Inspection Items */}
@@ -172,6 +274,211 @@ export default function AreaDetailScreen({ route, navigation }) {
       >
         <Camera size={28} color="#FFFFFF" strokeWidth={2} />
       </TouchableOpacity>
+
+      {/* Edit Status Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+              <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 24, paddingBottom: 40, paddingHorizontal: 24, maxHeight: '80%' }}>
+                <ScrollView
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Handle Bar */}
+                  <View className="items-center mb-6">
+                    <View style={{ width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2 }} />
+                  </View>
+
+                  <Text className="text-2xl font-bold text-gray-900 mb-2">
+                    Update Status
+                  </Text>
+                  <Text className="text-sm text-gray-500 mb-6">
+                    Change the inspection status for this area
+                  </Text>
+
+                  <View className="mb-6">
+                    <Text className="text-sm font-semibold text-gray-700 mb-2 ml-1">
+                      Inspection Status
+                    </Text>
+                    <View className="flex-row flex-wrap gap-2">
+                      <TouchableOpacity
+                        onPress={() => setEditStatus('IN')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          minWidth: '45%',
+                          backgroundColor: editStatus === 'IN' ? '#2563EB' : '#F1F5F9',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: editStatus === 'IN' ? '#2563EB' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            editStatus === 'IN' ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          ✓ Inspected (IN)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setEditStatus('NI')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          minWidth: '45%',
+                          backgroundColor: editStatus === 'NI' ? '#F59E0B' : '#F1F5F9',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: editStatus === 'NI' ? '#F59E0B' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            editStatus === 'NI' ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          ⊘ Not Inspected (NI)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setEditStatus('NP')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          minWidth: '45%',
+                          backgroundColor: editStatus === 'NP' ? '#6B7280' : '#F1F5F9',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: editStatus === 'NP' ? '#6B7280' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            editStatus === 'NP' ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          ∅ Not Present (NP)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setEditStatus('RR')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          minWidth: '45%',
+                          backgroundColor: editStatus === 'RR' ? '#DC2626' : '#F1F5F9',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: editStatus === 'RR' ? '#DC2626' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            editStatus === 'RR' ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          ⚠ Repair/Replace (RR)
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {editStatus === 'NI' && (
+                    <View className="mb-6">
+                      <Text className="text-sm font-semibold text-gray-700 mb-2 ml-1">
+                        Reason for Not Inspecting
+                      </Text>
+                      <View
+                        className={`bg-gray-50 rounded-2xl px-4 py-4 ${
+                          focusedField === 'notInspectedReason' ? 'border-2 border-blue-500' : 'border border-gray-200'
+                        }`}
+                      >
+                        <TextInput
+                          className="text-base text-gray-900"
+                          placeholder="e.g., Area was inaccessible, dangerous conditions"
+                          placeholderTextColor="#9CA3AF"
+                          value={editNotInspectedReason}
+                          onChangeText={setEditNotInspectedReason}
+                          multiline
+                          numberOfLines={3}
+                          textAlignVertical="top"
+                          onFocus={() => setFocusedField('notInspectedReason')}
+                          onBlur={() => setFocusedField(null)}
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      className="flex-1 rounded-2xl py-4"
+                      style={{ backgroundColor: '#F1F5F9' }}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setEditModalVisible(false);
+                        setEditStatus(area?.status || 'IN');
+                        setEditNotInspectedReason(area?.notInspectedReason || '');
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text className="text-gray-700 text-center font-bold text-base">
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      className="flex-1 rounded-2xl py-4"
+                      style={{
+                        backgroundColor: '#2563EB',
+                        shadowColor: '#2563EB',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 4,
+                      }}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setTimeout(() => handleUpdateStatus(), 100);
+                      }}
+                      disabled={updating}
+                      activeOpacity={0.8}
+                    >
+                      {updating ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Text className="text-white text-center font-bold text-base">
+                          Update
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

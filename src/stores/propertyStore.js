@@ -89,9 +89,13 @@ export const usePropertyStore = create((set, get) => ({
   },
 
   // Create area
-  createArea: async (propertyId, name) => {
+  createArea: async (propertyId, name, status = 'IN', notInspectedReason = '') => {
     try {
-      const response = await areasAPI.create({ propertyId, name });
+      const data = { propertyId, name, status };
+      if (status === 'NI' && notInspectedReason) {
+        data.notInspectedReason = notInspectedReason;
+      }
+      const response = await areasAPI.create(data);
       // Refresh current property to get updated areas (without setting global loading state)
       const propertyResponse = await propertiesAPI.getById(propertyId);
       set({ currentProperty: propertyResponse.data.property });

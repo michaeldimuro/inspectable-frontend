@@ -4,6 +4,26 @@ import { Package, ChevronRight } from 'lucide-react-native';
 
 export default function AreaCard({ area, onPress }) {
   const itemCount = area.items?.length || 0;
+  const status = area.status || 'IN';
+
+  const getStatusBadge = () => {
+    const statusConfig = {
+      IN: { label: 'IN', color: '#2563EB', bgColor: '#EFF6FF', icon: '✓' },
+      NI: { label: 'NI', color: '#F59E0B', bgColor: '#FEF3C7', icon: '⊘' },
+      NP: { label: 'NP', color: '#6B7280', bgColor: '#F3F4F6', icon: '∅' },
+      RR: { label: 'RR', color: '#DC2626', bgColor: '#FEE2E2', icon: '⚠' },
+    };
+
+    const config = statusConfig[status] || statusConfig.IN;
+
+    return (
+      <View style={{ backgroundColor: config.bgColor, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginRight: 8 }}>
+        <Text style={{ color: config.color, fontSize: 12, fontWeight: '700' }}>
+          {config.icon} {config.label}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <TouchableOpacity
@@ -32,20 +52,22 @@ export default function AreaCard({ area, onPress }) {
           
           {/* Content */}
           <View className="flex-1">
-            <Text className="text-base font-bold text-gray-900 mb-0.5" numberOfLines={1}>
-              {area.name}
-            </Text>
-            <Text className="text-sm text-gray-500">
-              {itemCount} {itemCount === 1 ? 'inspection' : 'inspections'}
-            </Text>
+            <View className="flex-row items-center mb-1">
+              <Text className="text-base font-bold text-gray-900" numberOfLines={1}>
+                {area.name}
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              {getStatusBadge()}
+              <Text className="text-sm text-gray-500">
+                {itemCount} {itemCount === 1 ? 'item' : 'items'}
+              </Text>
+            </View>
           </View>
         </View>
         
         {/* Badge */}
         <View className="flex-row items-center">
-          <View className="bg-blue-500 px-3 py-1.5 rounded-full mr-2">
-            <Text className="text-white font-bold text-sm">{itemCount}</Text>
-          </View>
           <ChevronRight size={20} color="#9CA3AF" strokeWidth={2} />
         </View>
       </View>

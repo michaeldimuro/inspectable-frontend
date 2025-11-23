@@ -38,6 +38,8 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [areaName, setAreaName] = useState('');
+  const [areaStatus, setAreaStatus] = useState('IN');
+  const [notInspectedReason, setNotInspectedReason] = useState('');
   const [focusedField, setFocusedField] = useState(null);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -88,12 +90,19 @@ export default function PropertyDetailScreen({ route, navigation }) {
       return;
     }
 
+    if (areaStatus === 'NI' && !notInspectedReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for not inspecting this area');
+      return;
+    }
+
     try {
       setCreatingArea(true);
-      const result = await createArea(propertyId, areaName);
+      const result = await createArea(propertyId, areaName, areaStatus, notInspectedReason);
       if (result.success) {
         setModalVisible(false);
         setAreaName('');
+        setAreaStatus('IN');
+        setNotInspectedReason('');
         // Store automatically refreshes property data
       } else {
         Alert.alert('Error', result.error);
@@ -217,7 +226,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
             <ChevronLeft size={28} color="#2563EB" strokeWidth={2.5} />
           </TouchableOpacity>
           <Text className="text-lg font-bold text-gray-900">
-            Property Details
+            Inspection Details
           </Text>
         </View>
       </View>
@@ -455,19 +464,136 @@ export default function PropertyDetailScreen({ route, navigation }) {
                         value={areaName}
                         onChangeText={setAreaName}
                         returnKeyType="done"
-                        onSubmitEditing={() => {
-                          Keyboard.dismiss();
-                          if (areaName.trim()) {
-                            // Small delay to let keyboard animation complete
-                            setTimeout(() => handleCreateArea(), 100);
-                          }
-                        }}
-                        autoFocus
                         onFocus={() => setFocusedField('areaName')}
                         onBlur={() => setFocusedField(null)}
                       />
                     </View>
                   </View>
+
+                  <View className="mb-6">
+                    <Text className="text-sm font-semibold text-gray-700 mb-2 ml-1">
+                      Inspection Status
+                    </Text>
+                    <View className="flex-row flex-wrap gap-2">
+                      <TouchableOpacity
+                        onPress={() => setAreaStatus('IN')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          minWidth: '45%',
+                          backgroundColor: areaStatus === 'IN' ? '#2563EB' : '#F1F5F9',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: areaStatus === 'IN' ? '#2563EB' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            areaStatus === 'IN' ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          ✓ Inspected (IN)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setAreaStatus('NI')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          minWidth: '45%',
+                          backgroundColor: areaStatus === 'NI' ? '#F59E0B' : '#F1F5F9',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: areaStatus === 'NI' ? '#F59E0B' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            areaStatus === 'NI' ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          ⊘ Not Inspected (NI)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setAreaStatus('NP')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          minWidth: '45%',
+                          backgroundColor: areaStatus === 'NP' ? '#6B7280' : '#F1F5F9',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: areaStatus === 'NP' ? '#6B7280' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            areaStatus === 'NP' ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          ∅ Not Present (NP)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setAreaStatus('RR')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          minWidth: '45%',
+                          backgroundColor: areaStatus === 'RR' ? '#DC2626' : '#F1F5F9',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: areaStatus === 'RR' ? '#DC2626' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            areaStatus === 'RR' ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          ⚠ Repair/Replace (RR)
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {areaStatus === 'NI' && (
+                    <View className="mb-6">
+                      <Text className="text-sm font-semibold text-gray-700 mb-2 ml-1">
+                        Reason for Not Inspecting
+                      </Text>
+                      <View
+                        className={`bg-gray-50 rounded-2xl px-4 py-4 ${
+                          focusedField === 'notInspectedReason' ? 'border-2 border-blue-500' : 'border border-gray-200'
+                        }`}
+                      >
+                        <TextInput
+                          className="text-base text-gray-900"
+                          placeholder="e.g., Area was inaccessible, dangerous conditions"
+                          placeholderTextColor="#9CA3AF"
+                          value={notInspectedReason}
+                          onChangeText={setNotInspectedReason}
+                          multiline
+                          numberOfLines={3}
+                          textAlignVertical="top"
+                          onFocus={() => setFocusedField('notInspectedReason')}
+                          onBlur={() => setFocusedField(null)}
+                        />
+                      </View>
+                    </View>
+                  )}
 
                   <View className="flex-row gap-3">
                     <TouchableOpacity
@@ -477,6 +603,8 @@ export default function PropertyDetailScreen({ route, navigation }) {
                         Keyboard.dismiss();
                         setModalVisible(false);
                         setAreaName('');
+                        setAreaStatus('IN');
+                        setNotInspectedReason('');
                       }}
                       activeOpacity={0.7}
                     >

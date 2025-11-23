@@ -51,7 +51,7 @@ function MainStack() {
         name="PropertyDetail" 
         component={PropertyDetailScreen}
         options={{ 
-          title: 'Property Details',
+          title: 'Inspection Details',
           headerShown: false // Has custom header
         }}
       />
@@ -131,7 +131,7 @@ function TabNavigator() {
         name="Home" 
         component={MainStack}
         options={{ 
-          tabBarLabel: 'Properties',
+          tabBarLabel: 'Inspections',
           tabBarIcon: ({ color, size }) => (
             <Home size={size} color={color} strokeWidth={2} />
           ),

@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, Image, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import { Calendar, Bot, ChevronDown, ChevronUp, Lightbulb, DollarSign, AlertTriangle, Trash2, Edit3 } from 'lucide-react-native';
 import { API_BASE_URL } from '../config/api';
 
 export default function InspectionItemCard({ item, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [carouselWidth, setCarouselWidth] = useState(Dimensions.get('window').width);
+  const flatListRef = useRef(null);
+  const screenWidth = Dimensions.get('window').width;
 
   let analysis = null;
   if (item.aiSummary) {
@@ -39,12 +43,22 @@ export default function InspectionItemCard({ item, onDelete, onEdit }) {
     }
   };
 
-  // Construct full image URL
-  const imageUrl = item.photoUrl.startsWith('http')
-    ? item.photoUrl
-    : `${API_BASE_URL.replace('/api', '')}${item.photoUrl}`;
+  // Construct full image URLs for all photos
+  const photoUrls = item.photos && item.photos.length > 0
+    ? item.photos.map(photo => 
+        photo.photoUrl.startsWith('http')
+          ? photo.photoUrl
+          : `${API_BASE_URL.replace('/api', '')}${photo.photoUrl}`
+      )
+    : [];
 
   const severityColors = analysis ? getSeverityColor(analysis.severity) : null;
+
+  const handleScroll = (event) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / carouselWidth);
+    setCurrentPhotoIndex(index);
+  };
 
   return (
     <View
@@ -62,31 +76,113 @@ export default function InspectionItemCard({ item, onDelete, onEdit }) {
         borderColor: '#F1F5F9',
       }}
     >
-      {/* Image with Overlay Badge */}
-      <View className="relative">
-        <Image
-          source={{ uri: imageUrl }}
-          className="w-full h-56"
-          resizeMode="cover"
-        />
-        {analysis && (
+      {/* Image Carousel with Overlay Badges */}
+      {photoUrls.length > 0 && (
+        <View 
+          style={{ position: 'relative' }}
+          onLayout={(event) => {
+            const { width } = event.nativeEvent.layout;
+            setCarouselWidth(width);
+          }}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={photoUrls}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            snapToInterval={carouselWidth}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            keyExtractor={(item, index) => `photo-${index}`}
+            getItemLayout={(data, index) => ({
+              length: carouselWidth,
+              offset: carouselWidth * index,
+              index,
+            })}
+            renderItem={({ item: photoUrl }) => (
+              <View style={{ width: carouselWidth }}>
+                <Image
+                  source={{ uri: photoUrl }}
+                  style={{ width: carouselWidth, height: 320 }}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+          />
+
+          {/* Page Indicator Dots */}
+          {photoUrls.length > 1 && (
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 12,
+                left: 0,
+                right: 0,
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              {photoUrls.map((_, index) => (
+                <View
+                  key={index}
+                  style={{
+                    width: currentPhotoIndex === index ? 24 : 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: currentPhotoIndex === index 
+                      ? '#2563EB' 
+                      : 'rgba(255, 255, 255, 0.6)',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4,
+                  }}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Photo Count Badge */}
           <View
-            className="absolute top-3 right-3 px-3 py-1.5 rounded-full flex-row items-center"
+            className="absolute top-3 left-3 px-3 py-1.5 rounded-full flex-row items-center"
             style={{
-              backgroundColor: severityColors.badge,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
+              shadowOpacity: 0.3,
               shadowRadius: 4,
             }}
           >
-            <AlertTriangle size={14} color="#FFFFFF" strokeWidth={2.5} />
-            <Text className="text-white font-bold text-xs uppercase tracking-wide ml-1">
-              {analysis.severity || 'N/A'}
+            <Text className="text-white font-bold text-xs">
+              {currentPhotoIndex + 1} / {photoUrls.length}
             </Text>
           </View>
-        )}
-      </View>
+
+          {/* Severity Badge */}
+          {analysis && (
+            <View
+              className="absolute top-3 right-3 px-3 py-1.5 rounded-full flex-row items-center"
+              style={{
+                backgroundColor: severityColors.badge,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+              }}
+            >
+              <AlertTriangle size={14} color="#FFFFFF" strokeWidth={2.5} />
+              <Text className="text-white font-bold text-xs uppercase tracking-wide ml-1">
+                {analysis.severity || 'N/A'}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Content */}
       <View className="p-5">
