@@ -1,6 +1,6 @@
 // API Configuration
 // Update this URL to match your backend server
-export const API_BASE_URL = process.env.API_URL || 'https://inspectable-backend.onrender.com/api';
+export const API_BASE_URL = 'https://inspectable-backend.onrender.com/api';
 
 // export const API_BASE_URL = 'http://10.0.0.133:3000/api';
 
