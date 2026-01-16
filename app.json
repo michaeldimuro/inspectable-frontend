@@ -15,14 +15,16 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "requireFullScreen": true,
       "bundleIdentifier": "co.inspectable.app",
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs access to your camera to capture inspection photos.",
         "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to select inspection photos.",
         "NSSpeechRecognitionUsageDescription": "This app uses speech recognition to allow you to dictate inspection notes hands-free while taking photos.",
         "NSMicrophoneUsageDescription": "This app needs access to your microphone for voice input when adding inspection descriptions.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIDeviceFamily": [1]
       }
     },
     "android": {
