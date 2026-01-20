@@ -1,12 +1,15 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mail, Calendar, User as UserIcon, Info, LogOut } from 'lucide-react-native';
+import { Mail, Calendar, User as UserIcon, Info, LogOut, Trash2, AlertTriangle, X } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuthStore();
+  const { user, logout, deleteAccount, isLoading } = useAuthStore();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -17,6 +20,32 @@ export default function ProfileScreen() {
         onPress: () => logout(),
       },
     ]);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    
+    // Validate email matches
+    if (confirmEmail.toLowerCase() !== user?.email?.toLowerCase()) {
+      setDeleteError('Email address does not match your account');
+      return;
+    }
+
+    const result = await deleteAccount(confirmEmail);
+    
+    if (result.success) {
+      setShowDeleteModal(false);
+      setConfirmEmail('');
+      // User will be automatically logged out and redirected
+    } else {
+      setDeleteError(result.error || 'Failed to delete account');
+    }
+  };
+
+  const openDeleteModal = () => {
+    setConfirmEmail('');
+    setDeleteError('');
+    setShowDeleteModal(true);
   };
 
   const getInitial = () => {
@@ -174,7 +203,7 @@ export default function ProfileScreen() {
 
         {/* Logout Button */}
         <TouchableOpacity
-          className="rounded-2xl py-4 mb-8 flex-row items-center justify-center"
+          className="rounded-2xl py-4 mb-4 flex-row items-center justify-center"
           style={{
             backgroundColor: '#FEF2F2',
             borderWidth: 1,
@@ -188,7 +217,133 @@ export default function ProfileScreen() {
             Logout
           </Text>
         </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity
+          className="rounded-2xl py-4 mb-8 flex-row items-center justify-center"
+          style={{
+            backgroundColor: '#7F1D1D',
+            borderWidth: 1,
+            borderColor: '#991B1B',
+          }}
+          onPress={openDeleteModal}
+          activeOpacity={0.7}
+        >
+          <Trash2 size={20} color="#FFFFFF" strokeWidth={2} />
+          <Text className="text-white text-center font-bold text-base ml-2">
+            Delete Account
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, width: '100%', maxWidth: 400 }}>
+            {/* Header */}
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#FEE2E2' }}>
+                  <AlertTriangle size={22} color="#DC2626" strokeWidth={2} />
+                </View>
+                <Text className="text-xl font-bold text-gray-900">
+                  Delete Account
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowDeleteModal(false)}
+                className="w-8 h-8 rounded-full items-center justify-center"
+                style={{ backgroundColor: '#F1F5F9' }}
+              >
+                <X size={18} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Warning Message */}
+            <View className="bg-red-50 rounded-xl p-4 mb-4 border border-red-200">
+              <Text className="text-sm text-red-800 leading-5 font-medium">
+                This action is permanent and cannot be undone. All your data including properties, inspection areas, and reports will be permanently deleted.
+              </Text>
+            </View>
+
+            {/* Confirmation Instructions */}
+            <Text className="text-sm text-gray-600 mb-2">
+              To confirm deletion, please enter your email address:
+            </Text>
+            <Text className="text-sm font-bold text-gray-900 mb-3">
+              {user?.email}
+            </Text>
+
+            {/* Email Input */}
+            <TextInput
+              value={confirmEmail}
+              onChangeText={setConfirmEmail}
+              placeholder="Enter your email address"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderWidth: 1,
+                borderColor: deleteError ? '#FCA5A5' : '#E2E8F0',
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontSize: 16,
+                color: '#1F2937',
+                marginBottom: deleteError ? 8 : 16,
+              }}
+            />
+
+            {/* Error Message */}
+            {deleteError ? (
+              <Text className="text-sm text-red-600 mb-4">
+                {deleteError}
+              </Text>
+            ) : null}
+
+            {/* Action Buttons */}
+            <View className="flex-row space-x-3">
+              <TouchableOpacity
+                className="flex-1 rounded-xl py-3.5 items-center justify-center mr-2"
+                style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={isLoading}
+              >
+                <Text className="text-gray-700 font-bold text-base">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 rounded-xl py-3.5 items-center justify-center flex-row ml-2"
+                style={{ 
+                  backgroundColor: isLoading ? '#F87171' : '#DC2626',
+                  opacity: isLoading ? 0.7 : 1
+                }}
+                onPress={handleDeleteAccount}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Trash2 size={16} color="#FFFFFF" strokeWidth={2} />
+                    <Text className="text-white font-bold text-base ml-1.5">
+                      Delete
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -42,6 +42,8 @@ export const authAPI = {
     api.post('/auth/register', { email, password, name }),
   login: (email, password) =>
     api.post('/auth/login', { email, password }),
+  deleteAccount: (email) =>
+    api.delete('/auth/account', { data: { email } }),
 };
 
 // Properties API
