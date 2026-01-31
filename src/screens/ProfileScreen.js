@@ -1,15 +1,42 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mail, Calendar, User as UserIcon, Info, LogOut, Trash2, AlertTriangle, X } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Mail, Calendar, User as UserIcon, Info, LogOut, Trash2, AlertTriangle, X, Crown, Check } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
+import { useSubscriptionStore } from '../stores/subscriptionStore';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const { user, logout, deleteAccount, isLoading } = useAuthStore();
+  const { isPro, expirationDate, restorePurchases } = useSubscriptionStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [restoringPurchases, setRestoringPurchases] = useState(false);
+
+  const handleUpgrade = () => {
+    navigation.navigate('Home', { 
+      screen: 'Subscription' 
+    });
+  };
+
+  const handleRestorePurchases = async () => {
+    setRestoringPurchases(true);
+    try {
+      const result = await restorePurchases();
+      if (result.restored && result.isPro) {
+        Alert.alert('Success', 'Your Pro subscription has been restored!');
+      } else {
+        Alert.alert('No Purchases Found', 'We couldn\'t find any previous purchases for this account.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    } finally {
+      setRestoringPurchases(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -162,6 +189,108 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
+        </View>
+
+        {/* Subscription Card */}
+        <View
+          style={{
+            backgroundColor: isPro ? '#EEF2FF' : '#FFFFFF',
+            borderRadius: 20,
+            padding: 24,
+            marginBottom: 20,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 12,
+            elevation: 3,
+            borderWidth: 1,
+            borderColor: isPro ? '#C7D2FE' : '#F1F5F9',
+          }}
+        >
+          <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-row items-center">
+              <View 
+                className="w-10 h-10 rounded-xl items-center justify-center mr-3" 
+                style={{ backgroundColor: isPro ? '#7C3AED' : '#F3E8FF' }}
+              >
+                <Crown size={20} color={isPro ? '#FFFFFF' : '#7C3AED'} strokeWidth={2} />
+              </View>
+              <View>
+                <Text className="text-lg font-bold text-gray-900">
+                  {isPro ? 'Pro Plan' : 'Free Plan'}
+                </Text>
+                {isPro && expirationDate && (
+                  <Text className="text-xs text-gray-500">
+                    Renews {new Date(expirationDate).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+            </View>
+            {isPro && (
+              <View className="bg-green-100 rounded-full px-3 py-1 flex-row items-center">
+                <Check size={12} color="#059669" strokeWidth={3} />
+                <Text className="text-xs font-bold text-green-700 ml-1">Active</Text>
+              </View>
+            )}
+          </View>
+
+          {isPro ? (
+            <View>
+              <Text className="text-sm text-gray-600 mb-3">
+                You have access to all Pro features:
+              </Text>
+              <View className="space-y-2">
+                {['Unlimited properties', 'PDF report export', 'Priority support'].map((feature, index) => (
+                  <View key={index} className="flex-row items-center">
+                    <Check size={14} color="#7C3AED" strokeWidth={2.5} />
+                    <Text className="text-sm text-gray-700 ml-2">{feature}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View>
+              <Text className="text-sm text-gray-600 mb-4">
+                Upgrade to Pro to unlock unlimited properties and PDF exports.
+              </Text>
+              <TouchableOpacity
+                onPress={handleUpgrade}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: '#7C3AED',
+                  borderRadius: 12,
+                  paddingVertical: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#7C3AED',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+              >
+                <Crown size={18} color="#FFFFFF" strokeWidth={2} />
+                <Text className="text-white font-bold text-base ml-2">
+                  Upgrade to Pro - $49/mo
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleRestorePurchases}
+                disabled={restoringPurchases}
+                activeOpacity={0.7}
+                style={{ marginTop: 12, alignItems: 'center' }}
+              >
+                {restoringPurchases ? (
+                  <ActivityIndicator size="small" color="#6B7280" />
+                ) : (
+                  <Text className="text-sm text-gray-500 underline">
+                    Restore Previous Purchases
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* About Section */}
