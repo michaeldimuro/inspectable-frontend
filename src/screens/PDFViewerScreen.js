@@ -4,17 +4,27 @@ import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Share2, Download } from 'lucide-react-native';
+import { ChevronLeft, Share2, Download, Crown, Lock } from 'lucide-react-native';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
+import { useSubscriptionStore } from '../stores/subscriptionStore';
 
 export default function PDFViewerScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const { pdfPath, propertyName } = route.params;
+  const { isPro, canExportPDF } = useSubscriptionStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [pdfBase64, setPdfBase64] = useState(null);
+
+  // Check if user can export PDF
+  const userCanExport = canExportPDF();
+
+  // Handle upgrade navigation
+  const handleUpgrade = () => {
+    navigation.navigate('Subscription', { feature: 'pdf' });
+  };
 
   const handleShare = async () => {
     try {
@@ -217,11 +227,20 @@ export default function PDFViewerScreen({ route, navigation }) {
           <Text className="text-lg font-bold text-gray-900 flex-1" numberOfLines={1}>
             {propertyName}
           </Text>
-          <TouchableOpacity onPress={handleShare} disabled={sharing} activeOpacity={0.7} className="ml-3">
+          <TouchableOpacity 
+            onPress={userCanExport ? handleShare : handleUpgrade} 
+            disabled={sharing} 
+            activeOpacity={0.7} 
+            className="ml-3"
+          >
             {sharing ? (
               <ActivityIndicator size="small" color="#2563EB" />
-            ) : (
+            ) : userCanExport ? (
               <Share2 size={24} color="#2563EB" strokeWidth={2} />
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Crown size={20} color="#7C3AED" strokeWidth={2} />
+              </View>
             )}
           </TouchableOpacity>
         </View>
@@ -270,31 +289,70 @@ export default function PDFViewerScreen({ route, navigation }) {
               bottom: 0,
             }}
           />
-          <TouchableOpacity
-            onPress={handleShare}
-            disabled={sharing}
-            className="rounded-2xl py-4"
-            style={{
-              backgroundColor: '#2563EB',
-              shadowColor: '#2563EB',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 4,
-            }}
-            activeOpacity={0.8}
-          >
-            {sharing ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <View className="flex-row items-center justify-center">
-                <Share2 size={20} color="#FFFFFF" strokeWidth={2} />
-                <Text className="text-white font-bold text-base ml-2">
-                  Share Report
+          {userCanExport ? (
+            // Pro user - can share
+            <TouchableOpacity
+              onPress={handleShare}
+              disabled={sharing}
+              className="rounded-2xl py-4"
+              style={{
+                backgroundColor: '#2563EB',
+                shadowColor: '#2563EB',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+              activeOpacity={0.8}
+            >
+              {sharing ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <View className="flex-row items-center justify-center">
+                  <Share2 size={20} color="#FFFFFF" strokeWidth={2} />
+                  <Text className="text-white font-bold text-base ml-2">
+                    Share Report
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ) : (
+            // Free user - show upgrade prompt
+            <View>
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: 12,
+                paddingHorizontal: 16,
+              }}>
+                <Lock size={16} color="#6B7280" strokeWidth={2} />
+                <Text style={{ fontSize: 14, color: '#6B7280', marginLeft: 8 }}>
+                  PDF export is a Pro feature
                 </Text>
               </View>
-            )}
-          </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleUpgrade}
+                className="rounded-2xl py-4"
+                style={{
+                  backgroundColor: '#7C3AED',
+                  shadowColor: '#7C3AED',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+                activeOpacity={0.8}
+              >
+                <View className="flex-row items-center justify-center">
+                  <Crown size={20} color="#FFFFFF" strokeWidth={2} />
+                  <Text className="text-white font-bold text-base ml-2">
+                    Upgrade to Pro
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
         </BlurView>
       </View>
     </View>

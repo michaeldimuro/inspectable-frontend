@@ -18,6 +18,7 @@ import CameraScreen from '../screens/CameraScreen';
 import ImageAnnotationScreen from '../screens/ImageAnnotationScreen';
 import PDFViewerScreen from '../screens/PDFViewerScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import SubscriptionScreen from '../screens/SubscriptionScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -85,6 +86,14 @@ function MainStack() {
         options={{ 
           headerShown: false,
           presentation: 'card'
+        }}
+      />
+      <Stack.Screen 
+        name="Subscription" 
+        component={SubscriptionScreen}
+        options={{ 
+          headerShown: false,
+          presentation: 'modal'
         }}
       />
     </Stack.Navigator>

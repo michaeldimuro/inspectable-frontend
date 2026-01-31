@@ -19,11 +19,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, Plus, MapPin, Loader, Home } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { usePropertyStore } from '../stores/propertyStore';
+import { useSubscriptionStore, FREE_TIER_LIMITS } from '../stores/subscriptionStore';
 import PropertyCard from '../components/PropertyCard';
 
 export default function PropertyListScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { properties, fetchProperties, createProperty, isLoading } = usePropertyStore();
+  const { isPro, canCreateProperty } = useSubscriptionStore();
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [newPropertyName, setNewPropertyName] = useState('');
@@ -31,6 +33,16 @@ export default function PropertyListScreen({ navigation }) {
   const [focusedField, setFocusedField] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [fetchingLocation, setFetchingLocation] = useState(false);
+
+  // Check if user can create more properties
+  const handleAddProperty = () => {
+    if (!canCreateProperty(properties.length)) {
+      // User has reached free tier limit, show subscription screen
+      navigation.navigate('Subscription', { feature: 'properties' });
+      return;
+    }
+    setModalVisible(true);
+  };
 
   useEffect(() => {
     fetchProperties();
@@ -204,7 +216,7 @@ export default function PropertyListScreen({ navigation }) {
               </Text>
               {!searchQuery && (
                 <TouchableOpacity
-                  onPress={() => setModalVisible(true)}
+                  onPress={handleAddProperty}
                   activeOpacity={0.8}
                   style={{
                     backgroundColor: '#2563EB',
@@ -235,7 +247,7 @@ export default function PropertyListScreen({ navigation }) {
       {properties.length > 0 && (
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => setModalVisible(true)}
+          onPress={handleAddProperty}
           style={{
             position: 'absolute',
             bottom: 24,
